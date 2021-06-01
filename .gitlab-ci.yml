@@ -1,8 +1,8 @@
 image: python:latest
 
 variables:
-  GITLAB_URL: "https://gitlab.com/"
-  GROUP_ID: "adventuretime"
+  GITLAB_URL: "https://gitlab.internal.sanger.ac.uk/"
+  GROUP_ID: "244"
 
 pages:
   stage: deploy
