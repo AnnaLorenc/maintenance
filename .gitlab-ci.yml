@@ -1,0 +1,29 @@
+image: python:latest
+
+variables:
+  GITLAB_URL: "https://gitlab.com/"
+  GROUP_ID: "adventuretime"
+
+pages:
+  stage: deploy
+  script:
+    - ls -a public
+  needs:
+    - create_report
+  artifacts:
+    paths:
+      - public/*
+  only:
+    - master
+
+create_report:
+  script:
+    - pip install -r requirements.txt
+    - python group_member_report.py -u $GITLAB_URL -g $GROUP_ID -c -q
+    - cp *.csv public
+    - cp allusers_report.json public
+  artifacts:
+    expose_as: 'members report'
+    paths:
+      - public/index.html
+      - public

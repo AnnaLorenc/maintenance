@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Group members report</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/bootstrap-table.min.css">
+  <script src="js/jquery-3.4.1.min.js"></script>
+  <script src="js/popper.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/bootstrap-table.min.js"></script>
+  <script>
+$( document ).ready(function() {
+    $(".search-input").on("keyup paste", function() {
+  var search = $(this).val();
+  $(".search-input").each(function() {
+    $(this).val(search);
+    $(this).trigger("drop");
+  });
+});
+  });
+  </script>
+  <script>
+    function runningFormatter(value, row, index) {
+      return index+1;
+    }
+  </script>
+</head>
+<body>
+
+
+<div id="heading" class="container-fluid text-white" style="background-color: #292961">
+  <h2><img style="height: 58px" src="assets/gitlab-logo-white-rgb.svg"/>Group members report (as of ${reportdate})</h2>
+</div>
+
+%for topgroup in allmembers.keys():
+<div class="container-fluid my-3">
+  <h3>All members of Group "${topgroup}", subgroups and projects
+    <button type="button" class="btn btn-outline-secondary float-right" data-toggle="collapse" data-target="#${topgroup}">Show/Hide</button>
+
+    <a class="btn btn-primary float-right mx-2" href="${topgroup}_all_members_${reportdate}.csv" download="${topgroup}_all_members_${reportdate}.csv">Download CSV</a>
+  </h3>
+</div>
+
+<div class="container-fluid ">
+  <div id="${topgroup}" class="collapse show">
+    % if failures[topgroup]:
+      <div class="alert alert-danger" role="alert">
+        <b>Error:</b> Report incomplete! Could not retrieve <b>${", ".join(failures[topgroup])}</b>. Check if token has sufficient access.
+      </div>
+    % endif
+    % if failures["shared_groups"]:
+      <div class="alert alert-warning" role="alert">
+        <b>Warning:</b> Groups shared outside namespace:<br/>
+        % for share_failure in failures["shared_groups"]:
+          <b>${share_failure[0]}</b> shared with <b>${share_failure[1]}</b>, outside <b>${topgroup}</b>. This may import additional users and may be a compliance issue.<br/>
+        % endfor
+      </div>
+    % endif
+
+    % if not isAdmin:
+      <div class="alert alert-warning" role="alert">
+         <b>Warning:</b> "last activity on" is based on user events. Some user events can be hidden if performed on a project that is not visible to your configured token (like a private project outside your group). The date shown here is thus not necessarily the last activity date but "last event visible to you".
+      </div>
+    % endif
+    <table class="table-hover table-striped" data-show-extended-pagination="true" data-pagination="true" data-toggle="table" data-search="true">
+      <thead>
+        <tr>
+          <th data-formatter="runningFormatter"></th>
+          <th scope="col" style="width: 20px">id</th>
+          <th data-sortable="true" scope="col" style="width: 10%">username</th>
+          <th data-sortable="true" scope="col" style="width: 10%">name</th>
+          % if not squash:
+            <th data-sortable="true" scope="col" style="width: 10%">main group access level</th>
+          % endif
+          <th data-sortable="true" scope="col" style="width: 5%">highest access level</th>
+          <th data-sortable="true" scope="col" style="width: 10%">groups and projects</th>
+          <th data-sortable="true" scope="col" style="width: 10%">last activity on</th>
+          <th data-sortable="true" scope="col" style="width: 10%">created at</th>
+          % if isAdmin:
+            <th data-sortable="true" scope="col" style="width: 10%">email</th>
+            <th data-sortable="true" scope="col" style="width: 10%">last sign in at</th>
+            <th data-sortable="true" scope="col" style="width: 10%">state</th>
+          % endif
+        </tr>
+      </thead>
+      <tbody>
+%for user in allmembers[topgroup].values():
+        <tr>
+          <td></td>
+          <td>${user["id"]}</td>
+          <td><a href="${gitlab}${user['username']}">${user['username']}</a></td>
+          <td>${user["name"]}</td>
+          % if not squash:
+          <td>
+            <% is_top_member = False %>
+            %for group in user["groups"]:
+              %if group[0] == topgroup:
+                ${str(group[1])}
+                <% is_top_member = True %>
+              %endif
+            %endfor
+            %if not is_top_member:
+              0
+            %endif
+          </td>
+          % endif
+          <td>${str(user["highest_access_level"]) + " - " + str(user["highest_access_level"]).replace("10","Guest").replace("20","Reporter").replace("30","Developer").replace("40","Maintainer").replace("50","Owner")}</td>
+          <td>
+            <ul style="margin: 0">
+            %for group in user["groups"]:
+              % if not group[3]:
+                <li><a href="${group[2]}">${str(group[1]) + ": " + str(group[0])}</a></li>
+              % else:
+                <li><a href="${group[2]}">${str(group[1]) + ": " + str(group[0])}</a> (via <a href="${gitlab+group[3][2]}">${str(group[3][2])}</a> )</li>
+              % endif
+            %endfor
+          </ul>
+          </td>
+          <td>${user["last_activity_on"]}</td>
+          <td>${user["created_at"]}</td>
+          % if isAdmin:
+            <td>${user["email"]}</td>
+            <td>${user["last_sign_in_at"]}</td>
+            <td>${user["state"]}</td>
+          % endif
+        </tr>
+%endfor
+      </tbody>
+    </table>
+  </div>
+</div>
+%endfor
+</body>
+</html>
